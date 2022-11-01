@@ -15,15 +15,8 @@ gc.collect()
 
 rp2.country('US')
 
-LED1 = Pin(0, Pin.OUT)
-LED2 = Pin(15, Pin.OUT)
-buzzer = PWM(Pin(22))
 
-bed1_btn = Pin(1,Pin.IN,Pin.PULL_DOWN)
-bed1_prev_state = bed1_btn.value()
-off_btn = Pin(4,Pin.IN,Pin.PULL_DOWN)
-off_prev_state = off_btn.value()
-
+# Wi-Fi and MQTT
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 
@@ -66,20 +59,21 @@ topic_sub = b'21 Sub'
 topic_pub = b'21'
 topic_msg = b'Test Msg'
 
-
-def sub_cb(topic, msg):
-    print("New message on topic {}".format(topic.decode('utf-8')))
-    msg = msg.decode('utf-8')
-    print(msg)
-    if msg == '21-1 On':
-        LED1.value(1)
-        buzzer.freq(300)
-        buzzer.duty_u16(60000)
-        utime.sleep_ms(400)
-    elif msg == '21-1 Off':
-        LED1.value(0)
-        buzzer.duty_u16(0)
-        utime.sleep_ms(400)
+## MQTT Sub not working at the moment
+# def sub_cb(topic, msg):
+#     print("New message on topic {}".format(topic.decode('utf-8')))
+#     msg = msg.decode('utf-8')
+#     print(msg)
+#     if msg == '21-1 On':
+#         LED1.freq(600)
+#         LED1.duty_u16(10000)
+#         buzzer.freq(300)
+#         buzzer.duty_u16(60000)
+#         utime.sleep_ms(400)
+#     elif msg == '21-1 Off':
+#         LED1.duty_u16(0)
+#         buzzer.duty_u16(0)
+#         utime.sleep_ms(400)
 
 def mqtt_connect():
     client = MQTTClient(client_id, mqtt_server)
@@ -100,8 +94,6 @@ except OSError as e:
 client.publish(topic_pub, topic_msg)
 
 
-
-
 def mqtt_connect():
     client = MQTTClient(client_id, mqtt_server)
     client.connect()
@@ -112,42 +104,132 @@ def reconnect():
     print('Failed to connect to the MQTT Broker. Reconnecting...')
     time.sleep(5)
     machine.reset()
-    
+
+# LEDs, Buttons, and Button Handlers
+
+LED1 = PWM(Pin(0))
+LED2 = PWM(Pin(15))
+buzzer = PWM(Pin(22))
+
+bed1_btn = Pin(1,Pin.IN,Pin.PULL_UP)
+bed1_prev_state = bed1_btn.value()
+bed2_btn = Pin(14,Pin.IN,Pin.PULL_UP)
+bed2_prev_state = bed2_btn.value()
+bed3_btn = Pin(27,Pin.IN,Pin.PULL_UP)
+bed3_prev_state = bed3_btn.value()
+bed4_btn = Pin(17,Pin.IN,Pin.PULL_UP)
+bed4_prev_state = bed4_btn.value()
+bth_btn = Pin(21,Pin.IN,Pin.PULL_UP)
+bth_prev_state = bth_btn.value()
+off_btn = Pin(4,Pin.IN,Pin.PULL_UP)
+off_prev_state = off_btn.value()
+
 # Button handlers
-
-
-def bed1_handler():
+def bed1_handler():    
     global bed1_prev_state
     if (bed1_btn.value() == True) and (bed1_prev_state == False):
         bed1_prev_state = True
+        utime.sleep_ms(400)
 
     elif (bed1_btn.value() == False) and (bed1_prev_state == True):
         bed1_prev_state = False
-        LED1.value(1)
+        LED1.freq(600)
+        LED1.duty_u16(10000)
         buzzer.freq(300)
         buzzer.duty_u16(60000)
-        client.publish('21', 'Room 21-1 has been pressed')
         utime.sleep_ms(400)
+        client.publish('21-1', 'Room 21-1 has been pressed')
         print("Bed 1 has been pressed")
+        
+def bed2_handler():
+    global bed2_prev_state
+    if (bed2_btn.value() == True) and (bed2_prev_state == False):
+        bed2_prev_state = True
+        utime.sleep_ms(400)
 
+    elif (bed2_btn.value() == False) and (bed2_prev_state == True):
+        bed2_prev_state = False
+        LED1.freq(600)
+        LED1.duty_u16(10000)
+        buzzer.freq(300)
+        buzzer.duty_u16(60000)
+        utime.sleep_ms(400)
+        client.publish('21-2', 'Room 21-2 has been pressed')
+        print("Bed 2 has been pressed")
+        
+def bed3_handler():
+    global bed3_prev_state
+    if (bed3_btn.value() == True) and (bed3_prev_state == False):
+        bed3_prev_state = True
+        utime.sleep_ms(400)
+
+    elif (bed3_btn.value() == False) and (bed3_prev_state == True):
+        bed3_prev_state = False
+        LED1.freq(600)
+        LED1.duty_u16(10000)
+        buzzer.freq(300)
+        buzzer.duty_u16(60000)
+        utime.sleep_ms(400)
+        client.publish('21-3', 'Room 21-3 has been pressed')
+        print("Bed 3 has been pressed")
+        
+def bed4_handler():
+    global bed4_prev_state
+    if (bed4_btn.value() == True) and (bed4_prev_state == False):
+        bed4_prev_state = True
+        utime.sleep_ms(400)
+
+    elif (bed4_btn.value() == False) and (bed4_prev_state == True):
+        bed4_prev_state = False
+        LED1.freq(600)
+        LED1.duty_u16(10000)
+        buzzer.freq(300)
+        buzzer.duty_u16(60000)
+        utime.sleep_ms(400)
+        client.publish('21-4', 'Room 21-4 has been pressed')
+        print("Bed 4 has been pressed")
+        
+def bth_handler():
+    global bth_prev_state
+    if (bth_btn.value() == True) and (bth_prev_state == False):
+        bth_prev_state = True
+        utime.sleep_ms(400)
+
+    elif (bth_btn.value() == False) and (bth_prev_state == True):
+        bth_prev_state = False
+        LED2.freq(600)
+        LED2.duty_u16(10000)
+        buzzer.freq(300)
+        buzzer.duty_u16(60000)
+        utime.sleep_ms(400)
+        client.publish('Bthrm 21', 'Bathroom 21 has been pressed')
+        print("Bathroom 21 has been pressed")        
+              
 def off_handler():
     global off_prev_state
     if (off_btn.value() == True) and (off_prev_state == False):
         off_prev_state = True
+        utime.sleep_ms(400)
         
     elif (off_btn.value() == False) and (off_prev_state == True):
         off_prev_state = False
-        LED1.value(0)
+        LED1.duty_u16(0)
+        LED2.duty_u16(0)
         buzzer.duty_u16(0)
-        client.publish('21', 'Room 21 has been answered')
         utime.sleep_ms(400)
-        print("Bed 1 has been answered")
+        client.publish('21-1', 'Room 21 has been answered')
+        client.publish('21-2', 'Room 21 has been answered')
+        client.publish('21-3', 'Room 21 has been answered')
+        client.publish('21-4', 'Room 21 has been answered')
+        client.publish('Bthrm 21', 'Room 21 has been answered')
+        print("Room 21 has been answered")
 
-
+# Main Loop
 while True:
-        
-    client.set_callback(sub_cb)
-    client.subscribe(topic_sub)
-    
     bed1_handler()
+    bed2_handler()
+    bed3_handler()
+    bed4_handler()
+    bth_handler()
     off_handler()
+
