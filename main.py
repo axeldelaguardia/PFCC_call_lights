@@ -55,9 +55,9 @@ else:
 
 mqtt_server = secrets.mqtt_id
 client_id = ubinascii.hexlify(machine.unique_id())
-topic_sub = b'21 Sub'
-topic_pub = b'21'
-topic_msg = b'Test Msg'
+topic_sub = b'Room 2'
+topic_pub = b'Main'
+topic_msg = b'Room 2 has connected.'
 
 ## MQTT Sub not working at the moment
 # def sub_cb(topic, msg):
@@ -138,7 +138,7 @@ def bed1_handler():
         buzzer.freq(300)
         buzzer.duty_u16(60000)
         utime.sleep_ms(400)
-        client.publish('21-1', 'Room 21-1 has been pressed')
+        client.publish('02-1', 'Room 2-1 has been pressed')
         print("Bed 1 has been pressed")
         
 def bed2_handler():
@@ -154,7 +154,7 @@ def bed2_handler():
         buzzer.freq(300)
         buzzer.duty_u16(60000)
         utime.sleep_ms(400)
-        client.publish('21-2', 'Room 21-2 has been pressed')
+        client.publish('02-2', 'Room 2-2 has been pressed')
         print("Bed 2 has been pressed")
         
 def bed3_handler():
@@ -170,7 +170,7 @@ def bed3_handler():
         buzzer.freq(300)
         buzzer.duty_u16(60000)
         utime.sleep_ms(400)
-        client.publish('21-3', 'Room 21-3 has been pressed')
+        client.publish('02-3', 'Room 2-3 has been pressed')
         print("Bed 3 has been pressed")
         
 def bed4_handler():
@@ -186,7 +186,7 @@ def bed4_handler():
         buzzer.freq(300)
         buzzer.duty_u16(60000)
         utime.sleep_ms(400)
-        client.publish('21-4', 'Room 21-4 has been pressed')
+        client.publish('02-4', 'Room 2-4 has been pressed')
         print("Bed 4 has been pressed")
         
 def bth_handler():
@@ -202,8 +202,8 @@ def bth_handler():
         buzzer.freq(300)
         buzzer.duty_u16(60000)
         utime.sleep_ms(400)
-        client.publish('Bthrm 21', 'Bathroom 21 has been pressed')
-        print("Bathroom 21 has been pressed")        
+        client.publish('Bathroom 2', 'Bathroom 2 has been pressed')
+        print("Bathroom 2 has been pressed")  
               
 def off_handler():
     global off_prev_state
@@ -217,12 +217,8 @@ def off_handler():
         LED2.duty_u16(0)
         buzzer.duty_u16(0)
         utime.sleep_ms(400)
-        client.publish('21-1', 'Room 21 has been answered')
-        client.publish('21-2', 'Room 21 has been answered')
-        client.publish('21-3', 'Room 21 has been answered')
-        client.publish('21-4', 'Room 21 has been answered')
-        client.publish('Bthrm 21', 'Room 21 has been answered')
-        print("Room 21 has been answered")
+        client.publish('02-Off', 'Room 2 has been answered') #using one MQTT Topic for Off function
+        print("Room 2 has been answered")
 
 # Main Loop
 while True:
@@ -232,4 +228,3 @@ while True:
     bed4_handler()
     bth_handler()
     off_handler()
-
