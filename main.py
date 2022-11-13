@@ -129,102 +129,94 @@ def bed1_handler():
     global bed1_prev_state
     if (bed1_btn.value() == True) and (bed1_prev_state == False):
         bed1_prev_state = True
-        utime.sleep_ms(400)
-
-    elif (bed1_btn.value() == False) and (bed1_prev_state == True):
-        bed1_prev_state = False
         LED1.freq(600)
         LED1.duty_u16(10000)
         buzzer.freq(300)
         buzzer.duty_u16(60000)
-        utime.sleep_ms(400)
         client.publish('02-1', 'Room 2-1 has been pressed')
+
+    elif (bed1_btn.value() == False) and (bed1_prev_state == True):
+        bed1_prev_state = False
+
         print("Bed 1 has been pressed")
         
 def bed2_handler():
     global bed2_prev_state
     if (bed2_btn.value() == True) and (bed2_prev_state == False):
         bed2_prev_state = True
-        utime.sleep_ms(400)
-
-    elif (bed2_btn.value() == False) and (bed2_prev_state == True):
-        bed2_prev_state = False
         LED1.freq(600)
         LED1.duty_u16(10000)
         buzzer.freq(300)
         buzzer.duty_u16(60000)
-        utime.sleep_ms(400)
         client.publish('02-2', 'Room 2-2 has been pressed')
         print("Bed 2 has been pressed")
+
+    elif (bed2_btn.value() == False) and (bed2_prev_state == True):
+        bed2_prev_state = False
+
         
 def bed3_handler():
     global bed3_prev_state
     if (bed3_btn.value() == True) and (bed3_prev_state == False):
         bed3_prev_state = True
-        utime.sleep_ms(400)
-
-    elif (bed3_btn.value() == False) and (bed3_prev_state == True):
-        bed3_prev_state = False
         LED1.freq(600)
         LED1.duty_u16(10000)
         buzzer.freq(300)
         buzzer.duty_u16(60000)
-        utime.sleep_ms(400)
         client.publish('02-3', 'Room 2-3 has been pressed')
         print("Bed 3 has been pressed")
+
+    elif (bed3_btn.value() == False) and (bed3_prev_state == True):
+        bed3_prev_state = False
+
         
 def bed4_handler():
     global bed4_prev_state
     if (bed4_btn.value() == True) and (bed4_prev_state == False):
         bed4_prev_state = True
-        utime.sleep_ms(400)
-
-    elif (bed4_btn.value() == False) and (bed4_prev_state == True):
-        bed4_prev_state = False
         LED1.freq(600)
         LED1.duty_u16(10000)
         buzzer.freq(300)
         buzzer.duty_u16(60000)
-        utime.sleep_ms(400)
         client.publish('02-4', 'Room 2-4 has been pressed')
         print("Bed 4 has been pressed")
+
+    elif (bed4_btn.value() == False) and (bed4_prev_state == True):
+        bed4_prev_state = False
         
 def bth_handler():
     global bth_prev_state
     if (bth_btn.value() == True) and (bth_prev_state == False):
         bth_prev_state = True
-        utime.sleep_ms(400)
-
-    elif (bth_btn.value() == False) and (bth_prev_state == True):
-        bth_prev_state = False
         LED2.freq(600)
         LED2.duty_u16(10000)
         buzzer.freq(300)
         buzzer.duty_u16(60000)
-        utime.sleep_ms(400)
         client.publish('Bathroom 2', 'Bathroom 2 has been pressed')
         print("Bathroom 2 has been pressed")  
+
+    elif (bth_btn.value() == False) and (bth_prev_state == True):
+        bth_prev_state = False
               
 def off_handler():
     global off_prev_state
     if (off_btn.value() == True) and (off_prev_state == False):
         off_prev_state = True
-        utime.sleep_ms(400)
         
     elif (off_btn.value() == False) and (off_prev_state == True):
         off_prev_state = False
         LED1.duty_u16(0)
         LED2.duty_u16(0)
         buzzer.duty_u16(0)
-        utime.sleep_ms(400)
-        client.publish('02-Off', 'Room 2 has been answered') #using one MQTT Topic for Off function
+        client.publish('02-Off', 'Room 2 has been answered')
         print("Room 2 has been answered")
 
 # Main Loop
 while True:
-    bed1_handler()
+    bed1_handler()   
     bed2_handler()
     bed3_handler()
     bed4_handler()
     bth_handler()
     off_handler()
+    utime.sleep_ms(400)
