@@ -157,7 +157,7 @@ async def messages(client):
         msg = msg.decode('utf-8')
         if msg == f'Room {secrets.ROOM_NUMBER} Reset':
             machine.reset()
-        if msg.startswith(f'Room {secrets.ROOM_NUMBER} Update'):
+        if msg.startswith(f'Room Update'):
             try:
                 update_info = json.loads(msg.split("|", 1)[1])
                 for url, info in update_info.items():
