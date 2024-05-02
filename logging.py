@@ -4,17 +4,22 @@ import uos as os
 import gc
 import json
 import machine
+import ntptime
+import time
 
 gc.collect()
 
 class Logging:
 
-    pending_post = []
+    logs_pending_post = []
+    off_pending_post = []
     
     def __init__(self, client):
         self.status = 'off'
         self.client = client
-    
+        self.count = 0
+
+
     def status_return(self):
         if self.status == 'on':
             return True
@@ -24,6 +29,32 @@ class Logging:
     def dprint(self, msg, *args):
         if self.status == 'on':
             print(msg % args)
+    
+    def custom_print(self, msg):
+        print(msg)
+
+    async def rtc_config(self):
+        try:
+            timezone_offset_hours = -6
+            current_time = time.localtime(time.mktime(time.localtime()) + timezone_offset_hours*3600)
+            formatted_time = "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d} {:s}{:02d}{:02d}".format(
+            current_time[0],  # year
+            current_time[1],  # month
+            current_time[2],  # day
+            current_time[3],  # hour
+            current_time[4],  # minute
+            current_time[5],  # second
+            '+' if timezone_offset_hours >= 0 else '-',  # sign of the timezone offset
+            abs(timezone_offset_hours),  # absolute value of the timezone offset
+            0  # minutes part of the timezone offset (always 00 in this case)
+        )
+
+            ntptime.settime()
+            await self.post(f"Formatted time: {formatted_time}")
+            return formatted_time
+        except Exception as e:
+            formatted_time = str(e)
+            await self.post(e)
 
     async def read_debug_status(self):
         if 'debug.json' in os.listdir():
@@ -32,6 +63,7 @@ class Logging:
                     debug_data = json.load(f)
                     self.status = debug_data.get('debug_mode', 'off')  # Default to 'off' if 'debug_mode' is not found
                     self.dprint('Debug Mode: %s', self.status)
+                    self.client.DEBUG = self.status_return()
             except Exception as e:
                 print("Error reading debug status:", e)
                 self.status = 'off'
@@ -59,36 +91,75 @@ class Logging:
             self.dprint('Successfully updated %s', file_path)
         except OSError as e:
             self.dprint('Error updating %s: %s', file_path, e)
-    
-    async def post(self, comment=""):
+            
+    async def post(self, comment={}, type=None):
         async def send(comment):
-            self.pending_post.append(comment)
-            self.dprint("Debug Mode: %s, Client Status: %s", self.status, self.client.isconnected())
-            try:
-                if self.client.isconnected() == True and self.status == 'on':
-                    await self.send_logs()
-                    print(comment)
-                    gc.collect()
-                elif self.client.isconnected() == False and self.status == 'on':
-                    self.dprint('Client is not connected but logs are on')
-                    try:
-                        with open('offline_logs.txt', 'a') as file:
-                            file.write(comment + '\n')  # Write logs to offline_logs.txt
-                            await asyncio.sleep(0)
-                    except OSError as e:
-                        self.dprint('Error writing to offline_logs.txt: %s', e)
-                else:
-                    self.dprint('Client: %s', self.client.isconnected())
-            except OSError as e:
-                print('Error writing to offline_logs.txt: %s', e)
+            if type is None:
+                self.logs_pending_post.append(comment)
+                try:
+                    if self.client.isconnected() == True and self.status == 'on':
+                        await self.send_logs()
+                        gc.collect()
+                    elif self.client.isconnected() == False and self.status == 'on':
+                        try:
+                            with open('offline_logs.txt', 'a') as file:
+                                self.count += 1
+                                file.write(f'\nOffline: {self.count} [Pico-time]: {self.rtc_config()}\n' + comment + ' Offline end\n')  # Write logs to offline_logs.txt
+                                await asyncio.sleep(0)
+                        except OSError as e:
+                            self.dprint('Error writing to offline_logs.txt: %s', e)
+                    else:
+                        self.dprint('Client: %s', self.client.isconnected())
+                except OSError as e:
+                    print('Error Posting: %s', e)
 
+            elif type == 'off':
+                self.off_pending_post.append(comment)
+                try:
+                    if self.client.isconnected() == True and self.status == 'on':
+                        await self.send_logs("off")
+                        gc.collect()
+                    elif self.client.isconnected() == False and self.status == 'on':
+                        try:
+                            with open('offline_logs.txt', 'a') as file:
+                                self.count += 1
+                                file.write(f'\nOffline: {self.count} [Pico-time]: {self.rtc_config()}\n' + comment + ' Offline end\n')  # Write logs to offline_logs.txt
+                                await asyncio.sleep(0)
+                        except OSError as e:
+                            self.dprint('Error writing to offline_logs.txt: %s', e)
+                    else:
+                        self.dprint('Client: %s', self.client.isconnected())
+                except OSError as e:
+                    print('Error Posting: %s', e)
         asyncio.create_task(send(comment))
 
-    async def send_logs(self):
-        logs = '\n'.join(self.pending_post)
-        await self.client.publish(f'Room {secrets.ROOM_NUMBER} Logs', logs, qos=0)
-        self.dprint('Logs sent successfully')
-        self.pending_post.clear()
+    async def send_logs(self, type=None):
+        if type == None:
+            logs = '\n'.join(self.logs_pending_post)
+            try:
+                if gc.mem_free() < 50000:
+                    gc.collect()
+                    self.logs_pending_post.clear()
+                    raise Exception('Not enough memory')
+                else:
+                    await self.client.publish(f'Room {secrets.ROOM_NUMBER} Logs', logs, qos=0)
+                    self.dprint('Logs sent successfully')
+                    self.logs_pending_post.clear()
+            except Exception as e:
+                self.dprint('Error sending logs: %s', e)
+        if type == 'off':
+            off_logs = '\n'.join(self.off_pending_post)
+            try:
+                if gc.mem_free() < 50000:
+                    gc.collect()
+                    self.logs_pending_post.clear()
+                    raise Exception('Not enough memory')
+                else:
+                    await self.client.publish(f'Room {secrets.ROOM_NUMBER}-Off', off_logs, qos=0)
+                    self.dprint('Off Logs sent successfully')
+                    self.off_pending_post.clear()
+            except Exception as e:
+                self.dprint('Error sending logs: %s', e)
 
     async def send_offline_logs(self):
         if 'offline_logs.txt' in os.listdir():
@@ -105,14 +176,37 @@ class Logging:
         machine.reset()
 
 class Outages:
-    def __init__(self, log):
+    def __init__(self, log, r):
         self.outages_count = 0
         self.init_outages_count = 0
         self.outages_file()
         self.log = log
+        self.brown_out_count = 0
+        self.r = r
+
+    async def count_brown_out(self):
+        file_path = 'brown_out.json'
+        try:
+            # Read current brown-out count from file
+            if file_path in os.listdir():
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                    self.brown_out_count = int(data.get('brown_out_count', 0))
+
+            # Increment brown-out count
+            self.brown_out_count += 1
+
+            # Save updated count to file
+            with open(file_path, 'w') as f:
+                json.dump({'brown_out_count': self.brown_out_count}, f)
+            self.log.dprint('Successfully updated %s', file_path)
+            await asyncio.sleep(0)
+        except OSError as e:
+            self.log.dprint('Error updating %s: %s', file_path, e)
+        
     
     async def outages_return(self):
-        self.log.client.publish(f"Room {secrets.ROOM_NUMBER}", f"Init Outages: {self.init_outages_count}, Reg Outgaes: {self.outages_count}", qos = 1)
+        self.log.client.publish(f"Room {secrets.ROOM_NUMBER}", f"Init Outages: {self.init_outages_count}, Reg Outgaes: {self.outages_count}, Ram Reset: {self.r.status}", qos = 1)
         print("Outages Status Sent Successfully!")
         await asyncio.sleep(0)
         

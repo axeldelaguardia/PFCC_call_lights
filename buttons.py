@@ -3,6 +3,7 @@ import secrets
 import uasyncio as asyncio
 import utime as time
 import gc
+import json
 
 from config import (
     buzzer, buzz_freq, buzz_duty, 
@@ -14,7 +15,7 @@ gc.collect()
 
 class ButtonController:
     def __init__(self, log, r):
-        self.status = {'1': 'off', '2': 'off', '3': 'off', '4': 'off', secrets.BATHROOM: 'off'} # Initialize button state
+        self.status = {'1': 'off', '2': 'off', '3': 'off', '4': 'off', 'bathroom': 'off'} # Initialize button state
         # self.client = client
         self.log = log
         self.r = r
@@ -53,6 +54,7 @@ class ButtonController:
                         await self.log.post(f"{secrets.ROOM_NUMBER}-{bed} post-debounce triggered")
                     else:
                         await self.log.post(f'Bathroom {secrets.BATHROOM} post-debounce triggered')
+                        self.button_status('bathroom', 'on')
             elif button.value() and previous_state:
                 previous_state = False
                 if bed != secrets.BATHROOM:
@@ -66,6 +68,8 @@ class ButtonController:
 
     async def button_pressed(self, bed):
         await self.pixel_buzzer_on(bed)
+        self.log.client.dprint(f"{secrets.ROOM_NUMBER}-{bed} button pressed")
+        self.log.client.dprint("Ram Free: %d, Ram Alloc: %d", gc.mem_free(), gc.mem_alloc())
 
     async def pixel_buzzer_on(self, bed):
         await asyncio.sleep_ms(0)
@@ -86,6 +90,7 @@ class ButtonController:
         await asyncio.sleep(0)
 
     async def off_handler(self, button, previous_state):
+        json_message = json.dumps(self.status)
         while True:
             await asyncio.sleep(0)
             if not button.value() and not previous_state:
@@ -101,6 +106,7 @@ class ButtonController:
                         await self.keep_on_if_still_pressed("3", bed3_btn.value())
                         await self.keep_on_if_still_pressed("4", bed4_btn.value())
                     await self.log.post(f'{secrets.ROOM_NUMBER}-off button post-debounce triggered')
+                    await self.log.post(json_message)
             elif button.value() and previous_state:
                 previous_state = False
                 await self.log.post(f'{secrets.ROOM_NUMBER}-off button released')
@@ -112,9 +118,14 @@ class ButtonController:
         pixels.clear()
         pixels.show()
         buzzer.duty_u16(0)
+        self.log.client.dprint("Ram Free: %d, Ram Alloc: %d", gc.mem_free(), gc.mem_alloc())
+        await self.log.post(f'{secrets.ROOM_NUMBER} all lights and buzzers are turned off')
         for bed in self.status:
             self.button_status(bed, 'off')
-            await self.log.post(f'{secrets.ROOM_NUMBER} all lights and buzzers are turned off')
+            await asyncio.sleep(0)
+        json_msg = json.dumps(self.status)
+        print(json_msg, self.status)
+        await self.log.post(json_msg, 'off')
 
     async def keep_on_if_still_pressed(self, bed, prev):
         if prev == False:
@@ -122,7 +133,7 @@ class ButtonController:
             await self.log.post(f'{secrets.ROOM_NUMBER}-{bed} button still pressed')
 
     async def test_values(self):
-        beds_to_check = ['1', '2', '3', '4', secrets.BATHROOM]
+        beds_to_check = ['1', '2', '3', '4', 'bathroom']
         previous_statuses = {bed: None for bed in beds_to_check}  # type: dict[str, Optional[str]]
         mqtt_sent_flags = {bed: False for bed in beds_to_check}  # Flag to track if MQTT message has been sent
 
@@ -149,31 +160,37 @@ class ButtonController:
             await asyncio.sleep(0)
             try:
                 if status == "on":
-                    if bed == secrets.BATHROOM:
+                    if bed == 'bathroom':
                         await self.log.client.publish(f'Bathroom {secrets.BATHROOM}', f'Bathroom {secrets.BATHROOM} has been pressed', qos=1)
+                        await self.log.post(f'MQTT publish: Bathroom {secrets.BATHROOM}')
                     else:
                         await self.log.client.publish(f'{secrets.ROOM_NUMBER}-{bed}', f'Room {secrets.ROOM_NUMBER}-{bed} has been pressed', qos=1)
+                        await self.log.post(f'MQTT publish: Room {secrets.ROOM_NUMBER}-{bed}')
                 elif status == 'off':
                     await self.log.client.publish(f'{secrets.ROOM_NUMBER}-Off', f'Room {secrets.ROOM_NUMBER} has been answered', qos=1)
+                    await self.log.post(f'MQTT publish: Room {secrets.ROOM_NUMBER}-Off',)
             except Exception as e:
-                # Handle the exception here
                 self.log.client.dprint('Error publishing message: %s', e)
+            await asyncio.sleep(0)
         else:
             while self.log.client.isconnected() == False and retry_count < retries:
                 try:
                     if status == "on":
                         if bed == secrets.BATHROOM:
                             await self.log.client.publish(f'Bathroom {secrets.BATHROOM}', f'Bathroom {secrets.BATHROOM} has been pressed', qos=1)
+                            await self.log.post(f'MQTT publish: Bathroom {secrets.BATHROOM}')
                         else:
                             await self.log.client.publish(f'{secrets.ROOM_NUMBER}-{bed}', f'Room {secrets.ROOM_NUMBER}-{bed} has been pressed', qos=1)
+                            await self.log.post(f'MQTT publish: Room {secrets.ROOM_NUMBER}-{bed}')
                     elif status == 'off':
                         await self.log.client.publish(f'{secrets.ROOM_NUMBER}-Off', f'Room {secrets.ROOM_NUMBER} has been answered', qos=1)
+                        await self.log.post(f'MQTT publish: Room {secrets.ROOM_NUMBER}-Off')
                     retry_count += 1
+                    print(retry_count)
                 except Exception as e:
-                    # Handle the exception here
                     self.log.client.dprint('Error publishing message: %s', e)
-            # self.log.client.dprint('Outages Detected: %s', o.outages_count)
             await asyncio.sleep_ms(0)
+
     async def handle_room_pressed(self, pixel_line, pixel_index, color):
         pixels.set_pixel_line(pixel_line, pixel_index, color)
         pixels.show()
