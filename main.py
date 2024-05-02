@@ -132,7 +132,6 @@ async def main(client):
     asyncio.create_task(log.read_debug_status())
     asyncio.create_task(network_status())
     
-    
     try:
         await client.connect()
     except OSError as e:
@@ -146,8 +145,6 @@ async def main(client):
     while True:
         await asyncio.sleep(0)
     
-    
-
 # Define configuration
 config['clean'] = False
 
